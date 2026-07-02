@@ -11,6 +11,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 import requests
+import os
 
 st.set_page_config(
     page_title="Phoenix Labor Dashboard",
@@ -39,34 +40,63 @@ def get_xcg_usd():
     return 0.558  # 1 XCG ≈ 0.558 USD (official peg ~1.79 XCG = 1 USD)
 
 def load_data():
-    """Load the labor data from Excel"""
-    try:
-        df = pd.read_excel(
-            "Phoenix_Labor_Cost_Overtime_Monthly_Tracker.xlsx",
-            sheet_name="Labor_Data_Entry",
-            skiprows=2
+    """Load the labor data from Excel.
+    First tries the file in the repo. If not found, shows file uploader.
+    """
+    # Try loading from repo first
+    excel_path = "Phoenix_Labor_Cost_Overtime_Monthly_Tracker.xlsx"
+    
+    if os.path.exists(excel_path):
+        try:
+            df = pd.read_excel(
+                excel_path,
+                sheet_name="Labor_Data_Entry",
+                skiprows=2
+            )
+        except Exception as e:
+            st.error(f"Error reading Excel file: {e}")
+            return pd.DataFrame()
+    else:
+        # Fallback: Let user upload the file
+        st.warning("Excel file not found in repository. Please upload it below.")
+        uploaded_file = st.file_uploader(
+            "Upload your Phoenix Labor Tracker Excel file",
+            type=["xlsx"],
+            key="excel_uploader"
         )
-        # Clean column names
-        df.columns = [str(c).strip() for c in df.columns]
         
-        # Filter only Production Only rows
-        if 'Production_Only (Yes/No)' in df.columns:
-            df = df[df['Production_Only (Yes/No)'] == 'Yes'].copy()
-        
-        # Ensure numeric columns
-        numeric_cols = ['Regular Hours', 'OT Hours @25%', 'OT Hours @50%', 
-                       'Total Cost (Local)', 'Total Cost (USD)']
-        for col in numeric_cols:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-        
-        # Calculate Total Hours
-        df['Total Hours'] = df.get('Regular Hours', 0) + df.get('OT Hours @25%', 0) + df.get('OT Hours @50%', 0)
-        
-        return df
-    except Exception as e:
-        st.error(f"Error loading data: {e}")
-        return pd.DataFrame()
+        if uploaded_file is not None:
+            try:
+                df = pd.read_excel(
+                    uploaded_file,
+                    sheet_name="Labor_Data_Entry",
+                    skiprows=2
+                )
+            except Exception as e:
+                st.error(f"Error reading uploaded file: {e}")
+                return pd.DataFrame()
+        else:
+            st.info("Please upload the Excel file to see the dashboard.")
+            return pd.DataFrame()
+
+    # Clean column names
+    df.columns = [str(c).strip() for c in df.columns]
+    
+    # Filter only Production Only rows
+    if 'Production_Only (Yes/No)' in df.columns:
+        df = df[df['Production_Only (Yes/No)'] == 'Yes'].copy()
+    
+    # Ensure numeric columns
+    numeric_cols = ['Regular Hours', 'OT Hours @25%', 'OT Hours @50%', 
+                   'Total Cost (Local)', 'Total Cost (USD)']
+    for col in numeric_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+    
+    # Calculate Total Hours
+    df['Total Hours'] = df.get('Regular Hours', 0) + df.get('OT Hours @25%', 0) + df.get('OT Hours @50%', 0)
+    
+    return df
 
 def calculate_monthly_summary(df):
     """Create monthly French vs Dutch comparison"""
