@@ -49,10 +49,10 @@ def load_data():
     if os.path.exists(excel_path):
         try:
             df = pd.read_excel(
-                excel_path,
-                sheet_name="Labor_Data_Entry",
-                skiprows=2
-            )
+    excel_path,
+    sheet_name="Labor_Data_Entry"
+    # No skiprows needed for the clean file
+)
         except Exception as e:
             st.error(f"Error reading Excel file: {e}")
             return pd.DataFrame()
