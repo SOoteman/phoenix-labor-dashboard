@@ -25,11 +25,10 @@ if uploaded_file is not None:
             df.get('OT Hours 50%', 0).fillna(0)
         )
         
-        # === SAFER COST CALCULATION (using columns that exist) ===
+        # Calculate Total Cost (USD)
         gross = df.get('Gross Pay (Local)', 0).fillna(0)
         charges = df.get('Employer Charges (Local)', 0).fillna(0)
         exchange = df.get('Exchange Rate to USD', 0.558).fillna(0.558)
-        
         df['Total Cost (USD)'] = (gross + charges) * exchange
         
         # Filter Production Only
@@ -66,7 +65,7 @@ if uploaded_file is not None:
                 'Total Cost (USD) (Dutch - Sint Maarten)': '${:,.0f}'
             }))
         
-        # Chart
+        # ==================== CHARTS ====================
         st.subheader("📈 Average Hourly Cost Trend")
         chart_df = df.groupby(['Month (YYYY-MM)', 'Entity']).agg({
             'Total Hours': 'sum',
@@ -77,6 +76,18 @@ if uploaded_file is not None:
         fig = px.line(chart_df, x='Month (YYYY-MM)', y='Avg $/hr', color='Entity', 
                       markers=True, title="Average Hourly Labor Cost Trend (USD)")
         st.plotly_chart(fig, use_container_width=True)
+        
+        # NEW: Overtime Trend
+        st.subheader("📊 Overtime Hours Trend")
+        ot_df = df.groupby('Month (YYYY-MM)').agg({
+            'OT Hours 25%': 'sum',
+            'OT Hours 50%': 'sum'
+        }).reset_index()
+        ot_df['Total OT Hours'] = ot_df['OT Hours 25%'] + ot_df['OT Hours 50%']
+        
+        fig2 = px.bar(ot_df, x='Month (YYYY-MM)', y='Total OT Hours', 
+                      title="Total Overtime Hours per Month (Production Staff)")
+        st.plotly_chart(fig2, use_container_width=True)
         
         # Detailed Table
         st.subheader("📋 Detailed Data")
