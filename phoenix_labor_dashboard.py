@@ -1,79 +1,50 @@
-#!/usr/bin/env python3
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from datetime import datetime
-import requests
 import os
 
 st.set_page_config(page_title="Phoenix Labor Dashboard", page_icon="🏗️", layout="wide")
 
-@st.cache_data(ttl=3600)
-def get_live_eur_usd():
+st.title("🏗️ Phoenix Labor Cost Dashboard")
+st.markdown("**Production Staff Only** — Management & Owners excluded")
+
+# File uploader (always visible)
+uploaded_file = st.file_uploader(
+    "Upload your Phoenix Labor Cost Tracker Clean Excel file",
+    type=["xlsx"]
+)
+
+if uploaded_file is not None:
     try:
-        r = requests.get("https://api.frankfurter.app/latest?from=EUR&to=USD", timeout=8)
-        return round(r.json()['rates']['USD'], 4)
-    except:
-        return 1.085
-
-def get_xcg_usd():
-    return 0.558
-
-def load_data():
-    excel_path = "Phoenix_Labor_Cost_Tracker_Clean.xlsx"
-    
-    df = pd.DataFrame()
-    
-    # Try repo file first
-    if os.path.exists(excel_path):
-        try:
-            df = pd.read_excel(excel_path, sheet_name="Labor_Data_Entry")
-        except Exception as e:
-            st.error(f"Error reading repo file: {e}")
-    
-    # If no data from repo, show uploader
-    if df.empty:
-        st.warning("Excel file not found in repository. Please upload it below.")
-        uploaded_file = st.file_uploader(
-            "Upload your Phoenix Labor Cost Tracker Clean Excel file",
-            type=["xlsx"]
+        df = pd.read_excel(uploaded_file, sheet_name="Labor_Data_Entry")
+        df.columns = [str(c).strip() for c in df.columns]
+        
+        # Calculate Total Hours
+        df['Total Hours'] = (
+            df.get('Regular Hours', 0).fillna(0) +
+            df.get('OT Hours 25%', 0).fillna(0) +
+            df.get('OT Hours 50%', 0).fillna(0)
         )
         
-        if uploaded_file is not None:
-            try:
-                df = pd.read_excel(uploaded_file, sheet_name="Labor_Data_Entry")
-            except Exception as e:
-                st.error(f"Error reading uploaded file: {e}")
-                return pd.DataFrame()
-        else:
-            st.info("Please upload the Excel file to continue.")
-            return pd.DataFrame()
+        # Filter Production Only
+        if 'Production_Only (Yes/No)' in df.columns:
+            df = df[df['Production_Only (Yes/No)'] == 'Yes'].copy()
+        
+        st.success("File loaded successfully!")
+        
+        # Show basic info
+        st.write(f"**Total rows:** {len(df)}")
+        st.write(f"**Months available:** {df['Month (YYYY-MM)'].nunique()}")
+        
+        # Simple table
+        st.subheader("Data Preview")
+        st.dataframe(df.head(20))
+        
+    except Exception as e:
+        st.error(f"Error reading the file: {e}")
 
-    # Clean and prepare
-    df.columns = [str(c).strip() for c in df.columns]
-    
-    # Calculate Total Hours
-    df['Total Hours'] = (
-        df.get('Regular Hours', 0).fillna(0) + 
-        df.get('OT Hours 25%', 0).fillna(0) + 
-        df.get('OT Hours 50%', 0).fillna(0)
-    )
-    
-    # Filter Production Only
-    if 'Production_Only (Yes/No)' in df.columns:
-        df = df[df['Production_Only (Yes/No)'] == 'Yes'].copy()
-    
-    return df
-
-# Load data
-df = load_data()
-eur_usd = get_live_eur_usd()
-xcg_usd = get_xcg_usd()
-
-# Sidebar
-st.sidebar.header("⚙️ Settings")
-st.sidebar.metric("EUR → USD (Live)", f"${eur_usd}")
-st.sidebar.metric("XCG → USD (Peg)", f"${xcg_usd}")
+else:
+    st.info("Please upload the Excel file to see the dashboard.")st.sidebar.metric("XCG → USD (Peg)", f"${xcg_usd}")
 st.sidebar.info("XCG is pegged to USD.")
 
 # Main
