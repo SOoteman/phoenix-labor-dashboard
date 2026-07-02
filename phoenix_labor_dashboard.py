@@ -25,11 +25,12 @@ if uploaded_file is not None:
             df.get('OT Hours 50%', 0).fillna(0)
         )
         
-        # Calculate Total Cost (USD) ourselves (most important fix)
-        if 'Total Employer Cost (Local)' in df.columns and 'Exchange Rate to USD' in df.columns:
-            df['Total Cost (USD)'] = df['Total Employer Cost (Local)'] * df['Exchange Rate to USD']
-        else:
-            df['Total Cost (USD)'] = 0
+        # === SAFER COST CALCULATION (using columns that exist) ===
+        gross = df.get('Gross Pay (Local)', 0).fillna(0)
+        charges = df.get('Employer Charges (Local)', 0).fillna(0)
+        exchange = df.get('Exchange Rate to USD', 0.558).fillna(0.558)
+        
+        df['Total Cost (USD)'] = (gross + charges) * exchange
         
         # Filter Production Only
         if 'Production_Only (Yes/No)' in df.columns:
@@ -48,9 +49,8 @@ if uploaded_file is not None:
         
         st.markdown("---")
         
-        # ==================== MONTHLY COMPARISON ====================
+        # Monthly Comparison
         st.subheader("📊 Monthly French vs Dutch Comparison")
-        
         monthly = df.groupby(['Month (YYYY-MM)', 'Entity']).agg({
             'Total Hours': 'sum',
             'Total Cost (USD)': 'sum'
@@ -66,9 +66,8 @@ if uploaded_file is not None:
                 'Total Cost (USD) (Dutch - Sint Maarten)': '${:,.0f}'
             }))
         
-        # ==================== CHART ====================
+        # Chart
         st.subheader("📈 Average Hourly Cost Trend")
-        
         chart_df = df.groupby(['Month (YYYY-MM)', 'Entity']).agg({
             'Total Hours': 'sum',
             'Total Cost (USD)': 'sum'
@@ -79,7 +78,7 @@ if uploaded_file is not None:
                       markers=True, title="Average Hourly Labor Cost Trend (USD)")
         st.plotly_chart(fig, use_container_width=True)
         
-        # ==================== DETAILED TABLE ====================
+        # Detailed Table
         st.subheader("📋 Detailed Data")
         st.dataframe(
             df[['Month (YYYY-MM)', 'Employee Name', 'Entity', 'Department', 
