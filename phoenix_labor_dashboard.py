@@ -44,7 +44,7 @@ def load_data():
     First tries the file in the repo. If not found, shows file uploader.
     """
     # Try loading from repo first
-    excel_path = "Phoenix_Labor_Cost_Overtime_Monthly_Tracker.xlsx"
+    excel_path = "Phoenix_Labor_Cost_Tracker_Clean.xlsx"
     
     if os.path.exists(excel_path):
         try:
@@ -60,7 +60,7 @@ def load_data():
         # Fallback: Let user upload the file
         st.warning("Excel file not found in repository. Please upload it below.")
         uploaded_file = st.file_uploader(
-            "Upload your Phoenix Labor Tracker Excel file",
+            "Upload your Phoenix Labor Cost Tracker Clean Excel file",
             type=["xlsx"],
             key="excel_uploader"
         )
@@ -93,8 +93,8 @@ def load_data():
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
     
-    # Calculate Total Hours
-    df['Total Hours'] = df.get('Regular Hours', 0) + df.get('OT Hours @25%', 0) + df.get('OT Hours @50%', 0)
+    # Calculate Total Hours (compatible with new structure)
+    df['Total Hours'] = df.get('Regular Hours', 0) + df.get('OT Hours 25%', 0) + df.get('OT Hours 50%', 0) + df.get('Total OT Hours', 0)
     
     return df
 
@@ -215,12 +215,12 @@ fig1.update_layout(yaxis_title="USD per Hour", xaxis_title="Month")
 st.plotly_chart(fig1, use_container_width=True)
 
 # OT Hours Trend (if columns exist)
-if 'OT Hours @25%' in df.columns or 'OT Hours @50%' in df.columns:
+if 'OT Hours 25%' in df.columns or 'OT Hours 50%' in df.columns:
     ot_df = df.groupby('Month (YYYY-MM)').agg({
-        'OT Hours @25%': 'sum',
-        'OT Hours @50%': 'sum'
+        'OT Hours 25%': 'sum',
+        'OT Hours 50%': 'sum'
     }).reset_index()
-    ot_df['Total OT Hours'] = ot_df.get('OT Hours @25%', 0) + ot_df.get('OT Hours @50%', 0)
+    ot_df['Total OT Hours'] = ot_df.get('OT Hours 25%', 0) + ot_df.get('OT Hours 50%', 0)
     
     fig2 = px.bar(
         ot_df, 
@@ -251,7 +251,7 @@ if selected_months:
     filtered_df = filtered_df[filtered_df['Month (YYYY-MM)'].isin(selected_months)]
 
 st.dataframe(
-    filtered_df[['Month (YYYY-MM)', 'Employee Name', 'Entity', 'Total Hours', 'Total Cost (USD)']].style.format({
+    filtered_df[['Month (YYYY-MM)', 'Employee Name', 'Entity', 'Department', 'Total Hours', 'Total Cost (USD)']].style.format({
         'Total Cost (USD)': '${:,.2f}'
     }),
     use_container_width=True,
