@@ -8,7 +8,6 @@ st.set_page_config(page_title="Phoenix Labor Dashboard", page_icon="🏗️", la
 st.title("🏗️ Phoenix Labor Cost Dashboard")
 st.markdown("**Production Staff Only** — Management & Owners excluded")
 
-# File uploader
 uploaded_file = st.file_uploader(
     "Upload your Phoenix Labor Cost Tracker Clean Excel file",
     type=["xlsx"]
@@ -26,6 +25,12 @@ if uploaded_file is not None:
             df.get('OT Hours 50%', 0).fillna(0)
         )
         
+        # Calculate Total Cost (USD) ourselves (most important fix)
+        if 'Total Employer Cost (Local)' in df.columns and 'Exchange Rate to USD' in df.columns:
+            df['Total Cost (USD)'] = df['Total Employer Cost (Local)'] * df['Exchange Rate to USD']
+        else:
+            df['Total Cost (USD)'] = 0
+        
         # Filter Production Only
         if 'Production_Only (Yes/No)' in df.columns:
             df = df[df['Production_Only (Yes/No)'] == 'Yes'].copy()
@@ -33,7 +38,7 @@ if uploaded_file is not None:
         # ==================== KPIs ====================
         col1, col2, col3, col4 = st.columns(4)
         total_hours = df['Total Hours'].sum()
-        total_cost = df.get('Total Cost (USD)', pd.Series([0])).sum()
+        total_cost = df['Total Cost (USD)'].sum()
         avg_cost = total_cost / total_hours if total_hours > 0 else 0
         
         col1.metric("Total Production Hours", f"{total_hours:,.0f}")
@@ -56,10 +61,12 @@ if uploaded_file is not None:
                                   values=['Total Hours', 'Total Cost (USD)'])
             pivot.columns = [f"{c[0]} ({c[1]})" for c in pivot.columns]
             pivot = pivot.reset_index()
-            st.dataframe(pivot.style.format({'Total Cost (USD) (French - Saint Martin)': '${:,.0f}',
-                                             'Total Cost (USD) (Dutch - Sint Maarten)': '${:,.0f}'}))
+            st.dataframe(pivot.style.format({
+                'Total Cost (USD) (French - Saint Martin)': '${:,.0f}',
+                'Total Cost (USD) (Dutch - Sint Maarten)': '${:,.0f}'
+            }))
         
-        # ==================== CHARTS ====================
+        # ==================== CHART ====================
         st.subheader("📈 Average Hourly Cost Trend")
         
         chart_df = df.groupby(['Month (YYYY-MM)', 'Entity']).agg({
