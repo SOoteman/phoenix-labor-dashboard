@@ -66,6 +66,7 @@ if uploaded_file is not None:
             }))
         
         # ==================== CHARTS ====================
+        # 1. Average Hourly Cost Trend
         st.subheader("📈 Average Hourly Cost Trend")
         chart_df = df.groupby(['Month (YYYY-MM)', 'Entity']).agg({
             'Total Hours': 'sum',
@@ -77,17 +78,40 @@ if uploaded_file is not None:
                       markers=True, title="Average Hourly Labor Cost Trend (USD)")
         st.plotly_chart(fig, use_container_width=True)
         
-        # NEW: Overtime Trend
-        st.subheader("📊 Overtime Hours Trend")
-        ot_df = df.groupby('Month (YYYY-MM)').agg({
+        # 2. Overtime by Entity
+        st.subheader("📊 Overtime Hours by Entity (French vs Dutch)")
+        ot_entity = df.groupby(['Month (YYYY-MM)', 'Entity']).agg({
             'OT Hours 25%': 'sum',
             'OT Hours 50%': 'sum'
         }).reset_index()
-        ot_df['Total OT Hours'] = ot_df['OT Hours 25%'] + ot_df['OT Hours 50%']
+        ot_entity['Total OT Hours'] = ot_entity['OT Hours 25%'] + ot_entity['OT Hours 50%']
         
-        fig2 = px.bar(ot_df, x='Month (YYYY-MM)', y='Total OT Hours', 
-                      title="Total Overtime Hours per Month (Production Staff)")
-        st.plotly_chart(fig2, use_container_width=True)
+        fig_ot = px.bar(ot_entity, x='Month (YYYY-MM)', y='Total OT Hours', 
+                        color='Entity', barmode='group',
+                        title="Overtime Hours per Month by Entity")
+        st.plotly_chart(fig_ot, use_container_width=True)
+        
+        # 3. Hours per Department
+        st.subheader("🏭 Hours per Department")
+        dept_hours = df.groupby('Department').agg({
+            'Total Hours': 'sum',
+            'Total Cost (USD)': 'sum'
+        }).reset_index().sort_values('Total Hours', ascending=False)
+        
+        fig_dept = px.bar(dept_hours, x='Department', y='Total Hours',
+                          title="Total Hours by Department (Production Staff)")
+        st.plotly_chart(fig_dept, use_container_width=True)
+        
+        # 4. Hours per Department per Month
+        st.subheader("📅 Hours per Department per Month")
+        dept_monthly = df.groupby(['Month (YYYY-MM)', 'Department']).agg({
+            'Total Hours': 'sum'
+        }).reset_index()
+        
+        fig_dept_month = px.bar(dept_monthly, x='Month (YYYY-MM)', y='Total Hours',
+                                color='Department', barmode='stack',
+                                title="Hours per Department per Month")
+        st.plotly_chart(fig_dept_month, use_container_width=True)
         
         # Detailed Table
         st.subheader("📋 Detailed Data")
