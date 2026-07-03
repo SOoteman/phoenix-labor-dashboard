@@ -91,7 +91,24 @@ if uploaded_file is not None:
                         title="Overtime Hours per Month by Entity")
         st.plotly_chart(fig_ot, use_container_width=True)
         
-        # 3. Hours per Department
+        # 3. NEW: Overtime Trend per Person (Top 12 by total OT)
+        st.subheader("👤 Overtime Trend per Person (Top 12)")
+        person_ot = df.groupby(['Month (YYYY-MM)', 'Employee Name']).agg({
+            'OT Hours 25%': 'sum',
+            'OT Hours 50%': 'sum'
+        }).reset_index()
+        person_ot['Total OT Hours'] = person_ot['OT Hours 25%'] + person_ot['OT Hours 50%']
+        
+        # Get top 12 people by total OT
+        top_people = person_ot.groupby('Employee Name')['Total OT Hours'].sum().nlargest(12).index.tolist()
+        person_ot_filtered = person_ot[person_ot['Employee Name'].isin(top_people)]
+        
+        fig_person = px.line(person_ot_filtered, x='Month (YYYY-MM)', y='Total OT Hours',
+                             color='Employee Name', markers=True,
+                             title="Overtime Hours Trend per Person (Top 12)")
+        st.plotly_chart(fig_person, use_container_width=True)
+        
+        # 4. Hours per Department
         st.subheader("🏭 Hours per Department")
         dept_hours = df.groupby('Department').agg({
             'Total Hours': 'sum',
@@ -102,7 +119,7 @@ if uploaded_file is not None:
                           title="Total Hours by Department (Production Staff)")
         st.plotly_chart(fig_dept, use_container_width=True)
         
-        # 4. Hours per Department per Month
+        # 5. Hours per Department per Month
         st.subheader("📅 Hours per Department per Month")
         dept_monthly = df.groupby(['Month (YYYY-MM)', 'Department']).agg({
             'Total Hours': 'sum'
