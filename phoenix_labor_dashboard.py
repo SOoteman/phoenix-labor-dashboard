@@ -54,7 +54,7 @@ if uploaded_file is not None:
         
         st.markdown("---")
         
-        # ==================== NEW: Average Cost per Hour Trend ====================
+        # ==================== AVERAGE COST PER HOUR TREND ====================
         st.subheader("📈 Average Cost per Hour Trend (Dutch vs French vs Total)")
         
         cost_trend = df.groupby(['Month (YYYY-MM)', 'Entity']).agg({
@@ -77,7 +77,7 @@ if uploaded_file is not None:
                           title="Average Cost per Hour Trend")
         st.plotly_chart(fig_avg, use_container_width=True)
         
-        # ==================== NEW: Monthly Cost + Employees ====================
+        # ==================== MONTHLY COST + EMPLOYEES ====================
         st.subheader("💰 Monthly Total Labor Cost + Active Employees")
         
         monthly_cost = df.groupby('Month (YYYY-MM)').agg({
@@ -106,7 +106,7 @@ if uploaded_file is not None:
         
         st.plotly_chart(fig_cost, use_container_width=True)
         
-        # ==================== DEPARTMENT HOURS TREND (Line Chart) ====================
+        # ==================== DEPARTMENT HOURS TREND ====================
         st.subheader("🏭 Hours per Department Trend (Line Chart)")
         
         dept_trend = df[df['Department'] != 'Placement'].copy()
@@ -124,18 +124,72 @@ if uploaded_file is not None:
         )
         st.plotly_chart(fig_dept_trend, use_container_width=True)
         
-        # ==================== EXISTING CHARTS ====================
-        st.subheader("📊 Overtime Hours by Entity")
+        # ==================== EMPLOYEE → DEPARTMENT OVERVIEW ====================
+        st.subheader("👥 Employee → Department Overview")
+        
+        emp_dept = df[['Employee Name', 'Department', 'Entity']].drop_duplicates().sort_values(
+            ['Entity', 'Department', 'Employee Name']
+        )
+        
+        st.dataframe(
+            emp_dept.style.hide(axis="index"),
+            use_container_width=True,
+            column_config={
+                "Employee Name": st.column_config.TextColumn("Employee Name", width="medium"),
+                "Department": st.column_config.TextColumn("Department", width="medium"),
+                "Entity": st.column_config.TextColumn("Entity", width="medium"),
+            }
+        )
+        
+        st.markdown("**Number of Employees per Department**")
+        dept_count = emp_dept.groupby('Department').size().reset_index(name='Number of Employees').sort_values('Number of Employees', ascending=False)
+        
+        fig_count = px.bar(
+            dept_count, 
+            x='Department', 
+            y='Number of Employees',
+            title="How many people are in each department?",
+            color='Department',
+            text='Number of Employees'
+        )
+        fig_count.update_traces(textposition='outside')
+        st.plotly_chart(fig_count, use_container_width=True)
+        
+        # ==================== OVERTIME BY ENTITY + TOTAL ====================
+        st.subheader("📊 Overtime Hours by Entity + Total")
+        
         ot_entity = df.groupby(['Month (YYYY-MM)', 'Entity']).agg({
             'OT Hours 25%': 'sum',
             'OT Hours 50%': 'sum'
         }).reset_index()
         ot_entity['Total OT Hours'] = ot_entity['OT Hours 25%'] + ot_entity['OT Hours 50%']
         
-        fig_ot = px.bar(ot_entity, x='Month (YYYY-MM)', y='Total OT Hours', 
-                        color='Entity', barmode='group')
+        ot_total = ot_entity.groupby('Month (YYYY-MM)').agg({
+            'Total OT Hours': 'sum'
+        }).reset_index()
+        ot_total['Entity'] = 'Total (Both Sides)'
+        
+        fig_ot = px.bar(
+            ot_entity, 
+            x='Month (YYYY-MM)', 
+            y='Total OT Hours', 
+            color='Entity', 
+            barmode='group',
+            title="Overtime Hours per Month (French vs Dutch)"
+        )
+        
+        fig_ot.add_scatter(
+            x=ot_total['Month (YYYY-MM)'], 
+            y=ot_total['Total OT Hours'],
+            mode='lines+markers',
+            name='Total OT (Both Sides)',
+            line=dict(color='black', width=3, dash='dash'),
+            marker=dict(size=10)
+        )
+        
         st.plotly_chart(fig_ot, use_container_width=True)
         
+        # ==================== OVERTIME PER PERSON ====================
         st.subheader("👤 Overtime Trend per Person (Top 12)")
         person_ot = df.groupby(['Month (YYYY-MM)', 'Employee Name']).agg({
             'OT Hours 25%': 'sum',
@@ -150,6 +204,7 @@ if uploaded_file is not None:
                              color='Employee Name', markers=True)
         st.plotly_chart(fig_person, use_container_width=True)
         
+        # ==================== DETAILED DATA ====================
         st.subheader("📋 Detailed Data")
         st.dataframe(
             df[['Month (YYYY-MM)', 'Employee Name', 'Entity', 'Department', 
