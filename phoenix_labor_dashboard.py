@@ -66,17 +66,23 @@ if uploaded_file is not None:
             }))
         
         # ==================== CHARTS ====================
-        # 1. Average Hourly Cost Trend
-        st.subheader("📈 Average Hourly Cost Trend")
-        chart_df = df.groupby(['Month (YYYY-MM)', 'Entity']).agg({
-            'Total Hours': 'sum',
-            'Total Cost (USD)': 'sum'
-        }).reset_index()
-        chart_df['Avg $/hr'] = chart_df['Total Cost (USD)'] / chart_df['Total Hours']
+        # 1. Total Hours Trend (French + Dutch + Total)
+        st.subheader("📈 Total Hours Trend (French vs Dutch + Overall)")
         
-        fig = px.line(chart_df, x='Month (YYYY-MM)', y='Avg $/hr', color='Entity', 
-                      markers=True, title="Average Hourly Labor Cost Trend (USD)")
-        st.plotly_chart(fig, use_container_width=True)
+        hours_trend = df.groupby(['Month (YYYY-MM)', 'Entity']).agg({
+            'Total Hours': 'sum'
+        }).reset_index()
+        
+        # Create total line
+        total_line = hours_trend.groupby('Month (YYYY-MM)')['Total Hours'].sum().reset_index()
+        total_line['Entity'] = 'Total (Both Sides)'
+        
+        hours_trend = pd.concat([hours_trend, total_line], ignore_index=True)
+        
+        fig_hours = px.line(hours_trend, x='Month (YYYY-MM)', y='Total Hours', 
+                            color='Entity', markers=True,
+                            title="Total Hours Trend - French vs Dutch vs Overall")
+        st.plotly_chart(fig_hours, use_container_width=True)
         
         # 2. Overtime by Entity
         st.subheader("📊 Overtime Hours by Entity (French vs Dutch)")
@@ -91,7 +97,7 @@ if uploaded_file is not None:
                         title="Overtime Hours per Month by Entity")
         st.plotly_chart(fig_ot, use_container_width=True)
         
-        # 3. NEW: Overtime Trend per Person (Top 12 by total OT)
+        # 3. Overtime Trend per Person (Top 12)
         st.subheader("👤 Overtime Trend per Person (Top 12)")
         person_ot = df.groupby(['Month (YYYY-MM)', 'Employee Name']).agg({
             'OT Hours 25%': 'sum',
@@ -99,7 +105,6 @@ if uploaded_file is not None:
         }).reset_index()
         person_ot['Total OT Hours'] = person_ot['OT Hours 25%'] + person_ot['OT Hours 50%']
         
-        # Get top 12 people by total OT
         top_people = person_ot.groupby('Employee Name')['Total OT Hours'].sum().nlargest(12).index.tolist()
         person_ot_filtered = person_ot[person_ot['Employee Name'].isin(top_people)]
         
