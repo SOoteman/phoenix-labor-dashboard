@@ -120,7 +120,7 @@ if uploaded_file is not None:
         
         st.plotly_chart(fig_cost, use_container_width=True)
         
-        # ==================== DEPARTMENT HOURS TREND ====================
+        # ==================== DEPARTMENT HOURS TREND (with matching colors) ====================
         st.subheader("🏭 Hours per Department Trend (Line Chart)")
         
         dept_trend = df[df['Department'] != 'Placement'].copy()
@@ -128,12 +128,23 @@ if uploaded_file is not None:
             'Total Hours': 'sum'
         }).reset_index()
         
+        # Matching colors with the department table
+        dept_colors = {
+            'Slab/Wall production': '#d4edda',
+            'Beam/Stairs production': '#cce5ff',
+            'Beam/Stairs Rebar': '#fff3cd',
+            'Slab/Wall Rebar': '#f8d7da',
+            'Support': '#e2e3e5',
+            'Crane operator': '#d1ecf1',
+        }
+        
         fig_dept_trend = px.line(
             dept_monthly,
             x='Month (YYYY-MM)',
             y='Total Hours',
             color='Department',
             markers=True,
+            color_discrete_map=dept_colors,
             title="Hours per Department Over Time"
         )
         st.plotly_chart(fig_dept_trend, use_container_width=True)
