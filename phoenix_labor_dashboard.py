@@ -162,12 +162,12 @@ if uploaded_file is not None:
         
         def color_department(val):
             colors = {
-                'Slab/Wall production': 'background-color: #d4edda',
-                'Beam/Stairs production': 'background-color: #cce5ff',
-                'Beam/Stairs Rebar': 'background-color: #fff3cd',
-                'Slab/Wall Rebar': 'background-color: #f8d7da',
-                'Support': 'background-color: #e2e3e5',
-                'Crane operator': 'background-color: #d1ecf1',
+                'Slab/Wall production': 'background-color: #d4edda; color: #155724; font-weight: bold',
+                'Beam/Stairs production': 'background-color: #cce5ff; color: #004085; font-weight: bold',
+                'Beam/Stairs Rebar': 'background-color: #fff3cd; color: #856404; font-weight: bold',
+                'Slab/Wall Rebar': 'background-color: #f8d7da; color: #721c24; font-weight: bold',
+                'Support': 'background-color: #e2e3e5; color: #383d41; font-weight: bold',
+                'Crane operator': 'background-color: #d1ecf1; color: #0c5460; font-weight: bold',
             }
             return colors.get(val, '')
         
@@ -210,7 +210,7 @@ if uploaded_file is not None:
             y=ot_total['Total OT Hours'],
             mode='lines+markers',
             name='Total OT (Both Sides)',
-            line=dict(color='black', width=3, dash='dash'),
+            line=dict(color='red', width=3, dash='dash'),
             marker=dict(size=10)
         )
         
